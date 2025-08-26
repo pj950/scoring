@@ -55,9 +55,9 @@ const ScoringModal: React.FC<{
   const isFormComplete = criteria.every(c => scores[c.id] !== undefined && scores[c.id] >= 0);
 
   return (
-    <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 p-4">
+    <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 p-4 flex items-center justify-center">
       <div 
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-800/80 border border-cyber-700 shadow-lg w-full max-w-lg flex flex-col max-h-[90vh]"
+        className="bg-slate-800/80 border border-cyber-700 shadow-lg w-full max-w-lg flex flex-col max-h-[90vh] relative"
         style={{clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%)'}}
       >
         {/* Modal Header */}
