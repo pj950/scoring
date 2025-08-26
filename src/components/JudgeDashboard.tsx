@@ -15,13 +15,16 @@ const ScoringModal: React.FC<{
   onClose: () => void;
   onSubmit: () => void;
 }> = ({ team, criteria, judgeId, onClose, onSubmit }) => {
-  const { data: judgeScores } = useSWR<Score>(`/api/data?entity=scores&judgeId=${judgeId}&teamId=${team.id}`);
+  const { data: judgeScores } = useSWR<Score>(
+    `/api/data?entity=scores&judgeId=${judgeId}&teamId=${team.id}`
+  );
   const [scores, setScores] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (judgeScores?.scores) {
       setScores(judgeScores.scores);
     } else {
+      // Pre-fill scores with 0 if there are no existing scores
       const initialScores: Record<string, number> = {};
       criteria.forEach(c => {
         initialScores[c.id] = 0;
@@ -49,12 +52,14 @@ const ScoringModal: React.FC<{
     onClose();
   };
 
-  const isFormComplete = criteria.every(c => scores[c.id] !== undefined && scores[c.id] >= 0);
+  const isFormComplete = criteria.every(
+    c => scores[c.id] !== undefined && scores[c.id] >= 0
+  );
 
   return (
     <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div
-        className="bg-slate-800/90 border border-cyber-700 shadow-lg w-full max-w-lg flex flex-col relative max-h-[90vh] rounded-xl"
+        className="bg-slate-800/90 border border-cyber-700 shadow-lg w-full max-w-lg flex flex-col relative rounded-xl max-h-[90vh]"
         style={{
           clipPath:
             'polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%)',
@@ -68,7 +73,7 @@ const ScoringModal: React.FC<{
         </div>
 
         {/* Scrollable Content */}
-        <div className="overflow-y-auto px-6 pt-2 pb-4 space-y-6 flex-grow">
+        <div className="overflow-y-auto px-6 pt-2 pb-4 space-y-6 flex-1">
           {criteria.map(c => (
             <div key={c.id} className="pb-2">
               <label className="block text-sm font-medium text-gray-300">
@@ -121,10 +126,18 @@ const ScoringModal: React.FC<{
 };
 
 const JudgeDashboard: React.FC<JudgeDashboardProps> = ({ judge, onLogout }) => {
-  const { data: teams = [] } = useSWR<Team[]>('/api/data?entity=teams', { refreshInterval: 5000 });
+  const { data: teams = [] } = useSWR<Team[]>('/api/data?entity=teams', {
+    refreshInterval: 5000,
+  });
   const { data: criteria = [] } = useSWR<Criterion[]>('/api/data?entity=criteria');
-  const { data: scores = [] } = useSWR<Score[]>(`/api/data?entity=scores&judgeId=${judge.id}`, { refreshInterval: 2000 });
-  const { data: activeTeamId } = useSWR<string | null>('/api/data?entity=activeTeamId', { refreshInterval: 2000 });
+  const { data: scores = [] } = useSWR<Score[]>(
+    `/api/data?entity=scores&judgeId=${judge.id}`,
+    { refreshInterval: 2000 }
+  );
+  const { data: activeTeamId } = useSWR<string | null>(
+    '/api/data?entity=activeTeamId',
+    { refreshInterval: 2000 }
+  );
 
   const [scoringTeam, setScoringTeam] = useState<Team | null>(null);
 
@@ -166,7 +179,11 @@ const JudgeDashboard: React.FC<JudgeDashboardProps> = ({ judge, onLogout }) => {
                 <div
                   key={team.id}
                   className={`relative p-5 flex flex-col justify-between transition-all duration-300
-                       ${isActive ? 'bg-slate-800' : 'bg-slate-900 opacity-60'}`}
+                       ${
+                         isActive
+                           ? 'bg-slate-800'
+                           : 'bg-slate-900 opacity-60'
+                       }`}
                   style={{
                     clipPath:
                       'polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 0 100%)',
