@@ -4,6 +4,13 @@ import { Pool } from '@neondatabase/serverless';
 // Helper to generate short, random codes for judges
 const generateSecretId = () => `JUDGE-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
+// Interface for the raw rating data from the database
+interface DbRating {
+    team_id: string;
+    judge_id: string;
+    scores: Record<string, number>;
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const client = new Pool({ connectionString: process.env.DATABASE_URL });
     const { entity, id, judgeId, teamId } = req.query;
@@ -63,24 +70,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const teams = teamsRes.rows;
                 const judges = judgesRes.rows;
                 const criteria = criteriaRes.rows;
-                const ratings = ratingsRes.rows;
+                const ratings: DbRating[] = ratingsRes.rows;
 
                 const totalJudges = judges.length;
                 
-                // FIX: The original reduce function could cause a type error. This ensures correct type handling.
                 const totalMaxScore = criteria.reduce((sum, c) => sum + Number(c.max_score || 0), 0);
 
                 if (totalJudges === 0 || totalMaxScore === 0 || teams.length === 0) {
                     return res.status(200).json([]);
                 }
                 
-                const ratingsByTeam = ratings.reduce((acc, rating) => {
+                const ratingsByTeam = ratings.reduce((acc: Record<string, DbRating[]>, rating) => {
                     if (!acc[rating.team_id]) {
                         acc[rating.team_id] = [];
                     }
                     acc[rating.team_id].push(rating);
                     return acc;
-                }, {} as Record<string, typeof ratings>);
+                }, {});
 
                 const calculatedScores = teams.map(team => {
                     const teamRatings = ratingsByTeam[team.id] || [];
