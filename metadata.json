@@ -1,0 +1,5 @@
+{
+  "name": "AI Hackathon Scoring System",
+  "description": "An application for managing teams, judges, and scoring criteria for a hackathon. Admins control the event, and judges score teams in real-time. Final scores are calculated and can be exported.",
+  "requestFramePermissions": []
+}
