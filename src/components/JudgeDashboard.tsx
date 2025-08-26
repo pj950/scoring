@@ -62,7 +62,7 @@ const ScoringModal: React.FC<{
         className="bg-slate-800/90 border border-cyber-700 shadow-lg w-full max-w-lg flex flex-col relative rounded-xl max-h-[90vh]"
         style={{
           clipPath:
-            'polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%)',
+            'polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%); margin-top:300px',
         }}
       >
         {/* Header */}
