@@ -58,7 +58,7 @@ const LiveScoreboard: React.FC<LiveScoreboardProps> = ({ onBackToLogin }) => {
         <div className="absolute inset-0 border-2 border-cyber-600/70 rounded-lg pointer-events-none" style={{clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%)'}}></div>
         <div className="text-center">
             <TrophyIcon className="w-16 h-16 mx-auto text-cyber-400"/>
-            <h1 className="mt-4 text-4xl font-bold text-gray-100 font-display">Live Leaderboard</h1>
+            <h1 className="mt-4 text-4xl font-bold text-gray-100 font-display">Live Scoreboard</h1>
             <p className="mt-2 text-sm text-gray-400">Scores are updated in real-time</p>
         </div>
         
