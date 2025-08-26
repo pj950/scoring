@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import useSWR, { mutate } from 'swr';
 import type { Judge, Team, Criterion, Score } from '../types';
@@ -55,20 +53,20 @@ const ScoringModal: React.FC<{
   const isFormComplete = criteria.every(c => scores[c.id] !== undefined && scores[c.id] >= 0);
 
   return (
-    <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 p-4 flex items-start justify-center overflow-y-auto">
+    <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 p-4 flex items-center justify-center">
       <div 
-        className="bg-slate-800/80 border border-cyber-700 shadow-lg w-full max-w-lg flex flex-col max-h-[90vh] relative mt-8"
+        className="bg-slate-800/80 border border-cyber-700 shadow-lg w-full max-w-lg flex flex-col max-h-[90vh] relative"
         style={{clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%)'}}
       >
         {/* Modal Header */}
-        <div className="p-6 pb-4 flex-shrink-0">
+        <div className="p-6 pb-2 flex-shrink-0">
           <h2 className="text-2xl font-bold text-gray-100 font-display">Scoring: {team.name}</h2>
         </div>
 
         {/* Scrollable Content */}
-        <div className="overflow-y-auto pl-6 pr-8 pt-2 pb-6 space-y-6 flex-1 h-0">
+        <div className="overflow-y-auto px-6 pt-2 pb-4 space-y-6 flex-grow">
           {criteria.map(c => (
-            <div key={c.id}>
+            <div key={c.id} className="pb-2">
               <label className="block text-sm font-medium text-gray-300">
                 <p className="font-semibold">{c.name} (out of {c.max_score})</p>
               </label>
