@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import useSWR, { mutate } from 'swr';
 import type { Judge, Team, Criterion, Score } from '../types';
@@ -56,11 +57,16 @@ const ScoringModal: React.FC<{
   return (
     <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div 
-        className="bg-slate-800/80 border border-cyber-700 shadow-lg w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto relative"
+        className="bg-slate-800/80 border border-cyber-700 shadow-lg w-full max-w-lg flex flex-col max-h-[90vh] relative"
         style={{clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%)'}}
       >
-        <h2 className="text-2xl font-bold text-gray-100 font-display">Scoring: {team.name}</h2>
-        <div className="space-y-6">
+        {/* Modal Header */}
+        <div className="p-6 pb-4 flex-shrink-0">
+          <h2 className="text-2xl font-bold text-gray-100 font-display">Scoring: {team.name}</h2>
+        </div>
+
+        {/* Scrollable Content */}
+        <div className="overflow-y-auto px-6 space-y-6 flex-grow">
           {criteria.map(c => (
             <div key={c.id}>
               <label className="block text-sm font-medium text-gray-300">
@@ -81,7 +87,9 @@ const ScoringModal: React.FC<{
             </div>
           ))}
         </div>
-        <div className="flex justify-end gap-4 pt-4">
+        
+        {/* Modal Footer */}
+        <div className="flex justify-end gap-4 p-6 pt-4 flex-shrink-0 border-t border-slate-700/50">
           <button onClick={onClose} className="px-4 py-2 bg-slate-600 text-gray-200 rounded hover:bg-slate-500 transition-colors">Cancel</button>
           <button onClick={handleSubmit} disabled={!isFormComplete} className="px-4 py-2 bg-cyber-600 text-white rounded hover:bg-cyber-500 disabled:bg-slate-700 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors">Submit Score</button>
         </div>
