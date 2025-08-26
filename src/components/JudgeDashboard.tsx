@@ -55,9 +55,9 @@ const ScoringModal: React.FC<{
   const isFormComplete = criteria.every(c => scores[c.id] !== undefined && scores[c.id] >= 0);
 
   return (
-    <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 p-4">
       <div 
-        className="bg-slate-800/80 border border-cyber-700 shadow-lg w-full max-w-lg flex flex-col max-h-[90vh] relative"
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-800/80 border border-cyber-700 shadow-lg w-full max-w-lg flex flex-col max-h-[90vh]"
         style={{clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%)'}}
       >
         {/* Modal Header */}
@@ -66,7 +66,7 @@ const ScoringModal: React.FC<{
         </div>
 
         {/* Scrollable Content */}
-        <div className="overflow-y-auto px-6 space-y-6 flex-grow">
+        <div className="overflow-y-auto pl-6 pr-8 pt-2 pb-6 space-y-6 flex-grow">
           {criteria.map(c => (
             <div key={c.id}>
               <label className="block text-sm font-medium text-gray-300">
