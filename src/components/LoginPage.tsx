@@ -86,7 +86,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onShowLeaderboard }) => 
               onClick={onShowLeaderboard}
               className="group relative w-full flex justify-center py-3 px-4 border border-cyber-400 text-sm font-bold rounded-md text-cyber-300 bg-transparent hover:bg-cyber-400 hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950 focus:ring-cyber-500 transition-all duration-300"
             >
-              Access Public Leaderboard
+              Access Public Scoreboard
             </button>
           </div>
         </form>
