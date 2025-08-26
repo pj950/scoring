@@ -21,7 +21,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { path } = req.query;
 
     try {
-        if (req.method === 'POST' && path === 'login') {
+        const route = Array.isArray(path) ? path.join('/') : path;
+
+        if (req.method === 'POST' && route === 'login') {
             const { loginCode, adminCode } = req.body;
             
             if (loginCode === adminCode) {
@@ -43,7 +45,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(401).json({ error: 'Invalid login code' });
         }
 
-        if (req.method === 'GET' && path === 'session') {
+        if (req.method === 'GET' && route === 'session') {
             const token = req.cookies[COOKIE_NAME];
             const payload = await verifyToken(token);
             if (payload) {
@@ -52,7 +54,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(401).json({ error: 'No active session' });
         }
 
-        if (req.method === 'POST' && path === 'logout') {
+        if (req.method === 'POST' && route === 'logout') {
             res.setHeader('Set-Cookie', cookie.serialize(COOKIE_NAME, '', { httpOnly: true, secure: process.env.NODE_ENV !== 'development', sameSite: 'strict', path: '/', expires: new Date(0) }));
             return res.status(200).json({ success: true });
         }
@@ -60,7 +62,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         res.status(404).json({ error: 'Not Found' });
 
     } catch (error) {
-        // FIX: Added curly braces to the catch block to fix syntax error.
         console.error('Auth API Error:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     } finally {
