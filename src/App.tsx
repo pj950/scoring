@@ -21,7 +21,7 @@ const App: React.FC = () => {
   const checkSession = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/session');
+      const res = await fetch('/api/auth?action=session');
       if (res.ok) {
         const data = await res.json();
         setUserRole(data.role);
@@ -44,7 +44,7 @@ const App: React.FC = () => {
   }, [checkSession]);
 
   const handleLogin = async (loginCode: string): Promise<boolean> => {
-    const res = await fetch('/api/auth/login', {
+    const res = await fetch('/api/auth?action=login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ loginCode }),
@@ -58,7 +58,7 @@ const App: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    await fetch('/api/auth?action=logout', { method: 'POST' });
     setUserRole(null);
     setCurrentUser(null);
     setPublicPage('LOGIN'); // Reset to login page on logout
