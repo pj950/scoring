@@ -24,9 +24,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const route = Array.isArray(path) ? path.join('/') : path;
 
         if (req.method === 'POST' && route === 'login') {
-            const { loginCode, adminCode } = req.body;
+            const { loginCode } = req.body;
+            const SERVER_ADMIN_CODE = process.env.VITE_ADMIN_LOGIN_CODE || 'ADMIN-2024';
             
-            if (loginCode === adminCode) {
+            if (loginCode === SERVER_ADMIN_CODE) {
                  const payload = { role: 'ADMIN', sub: 'admin_user' };
                  const token = await new SignJWT(payload).setProtectedHeader({ alg: 'HS256' }).setIssuedAt().setExpirationTime('1d').sign(JWT_SECRET);
                  res.setHeader('Set-Cookie', cookie.serialize(COOKIE_NAME, token, { httpOnly: true, secure: process.env.NODE_ENV !== 'development', sameSite: 'strict', path: '/', maxAge: 86400 }));

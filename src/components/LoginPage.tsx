@@ -1,10 +1,11 @@
+// Fix: Add triple-slash directive to include Vite client types for `import.meta.env`.
+/// <reference types="vite/client" />
 
 import React, { useState } from 'react';
 import { CircuitIcon } from './Icons';
 
-// This should be set in an environment variable, but for this example, we'll define it here.
-// In Vercel, this would be process.env.VITE_ADMIN_LOGIN_CODE
-const ADMIN_LOGIN_CODE = 'ADMIN-2024'; 
+// The hint now uses the environment variable, ensuring it matches what the backend expects.
+const ADMIN_LOGIN_CODE = import.meta.env.VITE_ADMIN_LOGIN_CODE || 'ADMIN-2024'; 
 
 
 interface LoginPageProps {

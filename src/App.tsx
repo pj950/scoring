@@ -10,10 +10,6 @@ import { SWRConfig } from 'swr';
 type UserRole = 'ADMIN' | 'JUDGE' | null;
 type PublicPage = 'LOGIN' | 'LEADERBOARD';
 
-// This should be set in an environment variable, but for this example, we'll define it here.
-// In Vercel, this would be process.env.VITE_ADMIN_LOGIN_CODE
-const ADMIN_LOGIN_CODE = 'ADMIN-2024'; 
-
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 const App: React.FC = () => {
@@ -51,7 +47,7 @@ const App: React.FC = () => {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ loginCode, adminCode: ADMIN_LOGIN_CODE }),
+      body: JSON.stringify({ loginCode }),
     });
 
     if (res.ok) {
