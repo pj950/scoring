@@ -23,7 +23,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
         if (req.method === 'POST' && action === 'login') {
             const { loginCode } = req.body;
-            const SERVER_ADMIN_CODE = process.env.VITE_ADMIN_LOGIN_CODE || 'ADMIN-2024';
+            const SERVER_ADMIN_CODE = 'ADMIN-2024';
             
             if (loginCode === SERVER_ADMIN_CODE) {
                  const payload = { role: 'ADMIN', sub: 'admin_user' };
