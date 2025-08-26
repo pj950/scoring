@@ -66,7 +66,7 @@ const ScoringModal: React.FC<{
         </div>
 
         {/* Scrollable Content */}
-        <div className="overflow-y-auto pl-6 pr-8 pt-2 pb-6 space-y-6 flex-1">
+        <div className="overflow-y-auto pl-6 pr-8 pt-2 pb-6 space-y-6 flex-1 h-0">
           {criteria.map(c => (
             <div key={c.id}>
               <label className="block text-sm font-medium text-gray-300">
