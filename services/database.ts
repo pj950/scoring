@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS judges (
 CREATE TABLE IF NOT EXISTS criteria (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name VARCHAR(255) NOT NULL,
-  max_score INTEGER NOT NULL,
+  weight NUMERIC(5,2) NOT NULL DEFAULT 1.0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -39,17 +39,17 @@ CREATE TABLE IF NOT EXISTS ratings (
   UNIQUE(judge_id, team_id)
 );
 
--- Table for general application state (like setup lock and active team)
+-- Table for general application state (like setup lock and active teams)
 -- This table will only ever have one row.
 CREATE TABLE IF NOT EXISTS app_state (
   id INT PRIMARY KEY DEFAULT 1,
   is_setup_locked BOOLEAN NOT NULL DEFAULT FALSE,
-  active_team_id UUID REFERENCES teams(id) ON DELETE SET NULL,
+  active_team_ids UUID[] DEFAULT '{}',
   CONSTRAINT single_row CHECK (id = 1)
 );
 
 -- Insert the initial single row for app_state
-INSERT INTO app_state (id, is_setup_locked, active_team_id)
-VALUES (1, FALSE, NULL)
+INSERT INTO app_state (id, is_setup_locked, active_team_ids)
+VALUES (1, FALSE, '{}')
 ON CONFLICT (id) DO NOTHING;
 `;
