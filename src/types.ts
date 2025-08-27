@@ -12,7 +12,7 @@ export interface Judge {
 export interface Criterion {
   id: string;
   name: string;
-  max_score: number;
+  weight: number;
 }
 
 export interface Score {
