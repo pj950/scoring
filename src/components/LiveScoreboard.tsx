@@ -1,4 +1,3 @@
-
 import React from 'react';
 import useSWR from 'swr';
 import type { FinalScore } from '../types';
@@ -17,8 +16,8 @@ const LiveScoreboard: React.FC<LiveScoreboardProps> = ({ onBackToLogin }) => {
       return (
           <div className="text-center text-gray-400 py-10">
               <CircuitIcon className="w-16 h-16 mx-auto text-cyber-500 animate-spin-slow mb-4"/>
-              <p className="font-display text-xl">Awaiting Final Scores...</p>
-              <p className="text-sm font-mono mt-2">// Ranks will appear here once teams are fully scored.</p>
+              <p className="font-display text-xl">Awaiting Scores...</p>
+              <p className="text-sm font-mono mt-2">// Scores are updated in real-time as judges submit their ratings.</p>
           </div>
       );
     }
@@ -58,7 +57,7 @@ const LiveScoreboard: React.FC<LiveScoreboardProps> = ({ onBackToLogin }) => {
         <div className="absolute inset-0 border-2 border-cyber-600/70 rounded-lg pointer-events-none" style={{clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%)'}}></div>
         <div className="text-center">
             <TrophyIcon className="w-16 h-16 mx-auto text-cyber-400"/>
-            <h1 className="mt-4 text-4xl font-bold text-gray-100 font-display">Live Scoreboard</h1>
+            <h1 className="mt-4 text-4xl font-bold text-gray-100 font-display">Live Leaderboard</h1>
             <p className="mt-2 text-sm text-gray-400">Scores are updated in real-time</p>
         </div>
         

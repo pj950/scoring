@@ -22,18 +22,19 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const { data: judges = [] } = useSWR<Judge[]>('/api/data?entity=judges');
   const { data: criteria = [] } = useSWR<Criterion[]>('/api/data?entity=criteria');
   const { data: scores = [] } = useSWR<Score[]>('/api/data?entity=scores');
-  const { data: activeTeamId } = useSWR<string | null>('/api/data?entity=activeTeamId');
+  const { data: activeTeamIds = [] } = useSWR<string[]>('/api/data?entity=activeTeamIds');
   const { data: finalScores = [] } = useSWR<FinalScore[]>('/api/data?entity=finalScores', { refreshInterval: 5000 });
 
   const [newItemName, setNewItemName] = useState('');
-  const [newCriterion, setNewCriterion] = useState({ name: '', max_score: 10 });
+  const [newCriterion, setNewCriterion] = useState({ name: '', weight: 10 });
+  const totalWeight = criteria.reduce((sum, c) => sum + (c.weight || 0), 0);
 
   const mutateAll = () => {
       mutate('/api/data?entity=teams');
       mutate('/api/data?entity=judges');
       mutate('/api/data?entity=criteria');
       mutate('/api/data?entity=scores');
-      mutate('/api/data?entity=activeTeamId');
+      mutate('/api/data?entity=activeTeamIds');
       mutate('/api/data?entity=finalScores');
   }
 
@@ -51,13 +52,13 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
   const handleAddCriterion = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newCriterion.name.trim() && newCriterion.max_score > 0) {
+    if (newCriterion.name.trim() && newCriterion.weight > 0) {
       await fetch('/api/data?entity=criteria', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newCriterion),
       });
-      setNewCriterion({ name: '', max_score: 10 });
+      setNewCriterion({ name: '', weight: 10 });
       mutateAll();
     }
   };
@@ -69,11 +70,11 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     }
   }
 
-  const activateTeam = async (id: string) => {
-    await fetch('/api/data?entity=activeTeamId', {
+  const toggleTeamActivation = async (id: string) => {
+    await fetch('/api/data?entity=toggleActiveTeam', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ teamId: id }),
     });
     mutateAll();
   };
@@ -82,7 +83,7 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     const ws_data = finalScores.map(s => ({
         Rank: s.rank,
         Team: s.teamName,
-        'Final Score': s.weightedScore,
+        'Final Score (%)': s.weightedScore,
     }));
     const ws = utils.json_to_sheet(ws_data);
     const wb = utils.book_new();
@@ -98,19 +99,22 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             <button type="submit" className="px-4 py-2 bg-cyber-600 text-white rounded hover:bg-cyber-500 transition-colors">Add Team</button>
         </form>
         <div className="space-y-3">
-            {teams.map(team => (
-                <HudCard key={team.id}>
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">{team.name}</span>
-                      <div className="flex items-center gap-2">
-                           <button onClick={() => activateTeam(team.id)} disabled={activeTeamId === team.id} className={`px-3 py-1 text-sm rounded transition-colors ${activeTeamId === team.id ? 'bg-green-500 text-white cursor-default' : 'bg-cyber-500 text-white hover:bg-cyber-400'}`}>
-                              {activeTeamId === team.id ? 'Active' : 'Activate'}
-                           </button>
-                           <button onClick={() => handleDeleteItem('teams', team.id)} className="p-2 text-gray-400 hover:text-red-500"><TrashIcon className="w-5 h-5"/></button>
-                      </div>
-                    </div>
-                </HudCard>
-            ))}
+            {teams.map(team => {
+                const isActive = activeTeamIds.includes(team.id);
+                return (
+                    <HudCard key={team.id}>
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">{team.name}</span>
+                          <div className="flex items-center gap-2">
+                               <button onClick={() => toggleTeamActivation(team.id)} className={`px-3 py-1 text-sm rounded transition-colors font-semibold ${isActive ? 'bg-red-500 text-white hover:bg-red-400' : 'bg-green-500 text-white hover:bg-green-400'}`}>
+                                  {isActive ? 'Deactivate' : 'Activate'}
+                               </button>
+                               <button onClick={() => handleDeleteItem('teams', team.id)} className="p-2 text-gray-400 hover:text-red-500"><TrashIcon className="w-5 h-5"/></button>
+                          </div>
+                        </div>
+                    </HudCard>
+                )
+            })}
         </div>
     </div>
   );
@@ -142,15 +146,18 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         <form onSubmit={handleAddCriterion} className="p-4 mb-4 space-y-3 border rounded-lg bg-slate-800 border-slate-700">
             <h3 className="text-lg font-semibold font-display">Add New Criterion</h3>
             <input value={newCriterion.name} onChange={e => setNewCriterion({...newCriterion, name: e.target.value})} placeholder="Criterion Name (e.g., Innovation)" className="w-full p-2 border rounded bg-slate-900 border-slate-600 focus:border-cyber-400 focus:ring-cyber-400 focus:outline-none"/>
-            <input type="number" value={newCriterion.max_score} onChange={e => setNewCriterion({...newCriterion, max_score: parseInt(e.target.value, 10) || 0})} placeholder="Max Score" className="w-full p-2 border rounded bg-slate-900 border-slate-600 focus:border-cyber-400 focus:ring-cyber-400 focus:outline-none"/>
+            <input type="number" value={newCriterion.weight} onChange={e => setNewCriterion({...newCriterion, weight: parseInt(e.target.value, 10) || 0})} placeholder="Weight (%)" className="w-full p-2 border rounded bg-slate-900 border-slate-600 focus:border-cyber-400 focus:ring-cyber-400 focus:outline-none"/>
             <button type="submit" className="w-full px-4 py-2 bg-cyber-600 text-white rounded hover:bg-cyber-500 transition-colors">Add Criterion</button>
         </form>
+         <div className="text-right text-gray-400 font-bold mb-4 pr-2">
+            Total Weight: <span className={totalWeight !== 100 ? 'text-red-400 animate-pulse' : 'text-green-400'}>{totalWeight}%</span>
+        </div>
         <div className="space-y-2">
             {criteria.map(c => (
                 <HudCard key={c.id}>
                     <div className="flex items-center justify-between">
                         <div>
-                            <span className="font-medium">{c.name} (Max Score: {c.max_score})</span>
+                            <span className="font-medium">{c.name} (Weight: {c.weight}%)</span>
                         </div>
                         <button onClick={() => handleDeleteItem('criteria', c.id)} className="p-2 text-gray-400 hover:text-red-500"><TrashIcon className="w-5 h-5"/></button>
                     </div>
@@ -193,13 +200,13 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         <div>
             <div className="flex justify-between items-center mb-3">
                 <h3 className="text-xl font-bold font-display">Leaderboard</h3>
-                <button onClick={exportToExcel} disabled={!finalScores.length} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-500 disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors">Export to Excel</button>
+                <button onClick={exportToExcel} disabled={!scores || scores.length === 0} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-500 disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors">Export to Excel</button>
             </div>
             <div className="space-y-3">
                 {finalScores.map((s, idx) => {
                     const rankStyles = [
                         { bg: 'bg-yellow-400/10', shadow: 'shadow-glow-gold', text: 'text-yellow-300', border: 'border-yellow-400' },
-                        { bg: 'bg-gray-400/10', shadow: 'shadow-glow-silver', text: 'text-gray-300', border: 'border-gray-400' },
+                        { bg: 'bg-gray-400/10', shadow: 'shadow-glow-silver', text: 'text-gray-300', border: 'border-glow-pink' },
                         { bg: 'bg-glow-pink/10', shadow: 'shadow-glow-bronze', text: 'text-glow-pink', border: 'border-glow-pink' },
                     ];
                     const style = idx < 3 ? rankStyles[idx] : {bg: 'bg-slate-800/80', shadow: '', text: 'text-cyber-300', border: 'border-slate-700'};
@@ -216,7 +223,7 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                         </div>
                     );
                 })}
-                {!finalScores.length && <p className="text-center text-gray-500 py-4">Awaiting data... Ranks appear once all judges have scored a team.</p>}
+                {(!scores || scores.length === 0) && <p className="text-center text-gray-500 py-4 font-mono">Awaiting data... Ranks are live and may change as more scores are submitted.</p>}
             </div>
         </div>
     </div>

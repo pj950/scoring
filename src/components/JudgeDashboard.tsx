@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import useSWR, { mutate } from 'swr';
 import type { Judge, Team, Criterion, Score } from '../types';
@@ -57,7 +55,7 @@ const ScoringModal: React.FC<{
   return (
     <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 min-h-screen flex items-center justify-center p-4">
       <div 
-        className="bg-slate-800/80 border border-cyber-700 shadow-lg w-full max-w-lg flex flex-col max-h-screen overflow-y-auto relative"
+        className="bg-slate-800/80 border border-cyber-700 shadow-lg w-full max-w-lg flex flex-col max-h-[90vh] relative"
         style={{clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%)'}}
       >
         {/* Modal Header */}
@@ -66,17 +64,17 @@ const ScoringModal: React.FC<{
         </div>
 
         {/* Scrollable Content */}
-        <div className="overflow-y-auto pl-6 pr-8 pt-2 pb-6 space-y-6 flex-1 h-0">
+        <div className="overflow-y-auto pl-6 pr-4 pt-2 pb-6 space-y-6 flex-1 h-0">
           {criteria.map(c => (
             <div key={c.id}>
               <label className="block text-sm font-medium text-gray-300">
-                <p className="font-semibold">{c.name} (out of {c.max_score})</p>
+                <p className="font-semibold">{c.name} (Weight: {c.weight}%)</p>
               </label>
               <div className="flex items-center gap-4 mt-2">
                 <input
                     type="range"
                     min="0"
-                    max={c.max_score}
+                    max="10"
                     step="1"
                     value={scores[c.id] || 0}
                     onChange={e => handleScoreChange(c.id, parseInt(e.target.value, 10))}
@@ -102,7 +100,7 @@ const JudgeDashboard: React.FC<JudgeDashboardProps> = ({ judge, onLogout }) => {
   const { data: teams = [] } = useSWR<Team[]>('/api/data?entity=teams', { refreshInterval: 5000 });
   const { data: criteria = [] } = useSWR<Criterion[]>('/api/data?entity=criteria');
   const { data: scores = [] } = useSWR<Score[]>(`/api/data?entity=scores&judgeId=${judge.id}`, { refreshInterval: 2000 });
-  const { data: activeTeamId } = useSWR<string | null>('/api/data?entity=activeTeamId', { refreshInterval: 2000 });
+  const { data: activeTeamIds = [] } = useSWR<string[]>('/api/data?entity=activeTeamIds', { refreshInterval: 2000 });
   
   const [scoringTeam, setScoringTeam] = useState<Team | null>(null);
 
@@ -133,7 +131,7 @@ const JudgeDashboard: React.FC<JudgeDashboardProps> = ({ judge, onLogout }) => {
           <h2 className="text-2xl font-bold mb-4 font-display">Teams to Score</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {teams.map(team => {
-              const isActive = team.id === activeTeamId;
+              const isActive = activeTeamIds.includes(team.id);
               const hasScored = hasScoredTeam(team.id);
               return (
                 <div key={team.id}

@@ -12,6 +12,14 @@ interface DbRating {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+    if (!process.env.DATABASE_URL) {
+        console.error('FATAL: DATABASE_URL environment variable is not set.');
+        return res.status(500).json({
+            error: 'Internal Server Error',
+            message: 'Server is not configured correctly. DATABASE_URL is missing.'
+        });
+    }
+
     const client = new Pool({ connectionString: process.env.DATABASE_URL });
     const { entity, id, judgeId, teamId } = req.query;
 
@@ -55,68 +63,74 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 }));
                 return res.status(200).json(allScores);
             }
-            if (entity === 'activeTeamId') {
-                 const { rows } = await client.query('SELECT active_team_id FROM app_state WHERE id = 1');
-                 return res.status(200).json(rows.length > 0 ? rows[0].active_team_id : null);
+            if (entity === 'activeTeamIds') {
+                 const { rows } = await client.query('SELECT active_team_ids FROM app_state WHERE id = 1');
+                 return res.status(200).json(rows.length > 0 ? rows[0].active_team_ids : []);
             }
             if (entity === 'finalScores') {
-                const [teamsRes, judgesRes, criteriaRes, ratingsRes] = await Promise.all([
+                const [teamsRes, criteriaRes, ratingsRes] = await Promise.all([
                     client.query('SELECT id, name FROM teams'),
-                    client.query('SELECT id FROM judges'),
-                    client.query('SELECT id, max_score FROM criteria'),
+                    client.query('SELECT id, weight FROM criteria'),
                     client.query('SELECT team_id, judge_id, scores FROM ratings'),
                 ]);
                 
                 const teams = teamsRes.rows;
-                const judges = judgesRes.rows;
-                const criteria = criteriaRes.rows;
+                const criteria: {id: string, weight: number}[] = criteriaRes.rows;
                 const ratings: DbRating[] = ratingsRes.rows;
 
-                const totalJudges = judges.length;
-                
-                const totalMaxScore = criteria.reduce((sum, c) => sum + Number(c.max_score || 0), 0);
+                const criteriaMap = new Map(criteria.map(c => [c.id, c.weight]));
 
-                if (totalJudges === 0 || totalMaxScore === 0 || teams.length === 0) {
+                if (teams.length === 0 || criteria.length === 0) {
                     return res.status(200).json([]);
                 }
                 
                 const ratingsByTeam = ratings.reduce((acc: Record<string, DbRating[]>, rating) => {
-                    if (!acc[rating.team_id]) {
-                        acc[rating.team_id] = [];
-                    }
+                    if (!acc[rating.team_id]) acc[rating.team_id] = [];
                     acc[rating.team_id].push(rating);
                     return acc;
                 }, {});
 
                 const calculatedScores = teams.map(team => {
                     const teamRatings = ratingsByTeam[team.id] || [];
-                    if (teamRatings.length !== totalJudges) {
-                        return null;
+                    if (teamRatings.length === 0) {
+                        return {
+                            teamId: team.id,
+                            teamName: team.name,
+                            weightedScore: 0,
+                        };
                     }
                     
-                    const judgePercentages = judges.map(judge => {
-                        const rating = teamRatings.find(r => r.judge_id === judge.id);
-                        if (!rating) return 0; // Should not happen due to the check above
-
-                        const totalScoreFromJudge = Object.values(rating.scores).reduce((sum: number, score: any) => sum + Number(score), 0);
-                        return (totalScoreFromJudge / totalMaxScore) * 100;
+                    const judgeFinalScores = teamRatings.map(rating => {
+                        let judgeWeightedScore = 0;
+                        for (const criterionId in rating.scores) {
+                            const weight = criteriaMap.get(criterionId);
+                            if (weight) {
+                                const score = Number(rating.scores[criterionId]);
+                                judgeWeightedScore += (score / 10) * weight;
+                            }
+                        }
+                        return judgeWeightedScore;
                     });
                     
-                    const averagePercentage = judgePercentages.reduce((sum, p) => sum + p, 0) / totalJudges;
+                    const averagePercentage = judgeFinalScores.reduce((sum, s) => sum + s, 0) / judgeFinalScores.length;
                     
                     return {
                         teamId: team.id,
                         teamName: team.name,
                         weightedScore: parseFloat(averagePercentage.toFixed(2)),
                     };
-                }).filter((s): s is { teamId: string; teamName: string; weightedScore: number; } => s !== null);
+                });
 
-                const sortedScores = [...calculatedScores].sort((a, b) => b!.weightedScore - a!.weightedScore);
-
-                const finalRankedScores = sortedScores.map((score, index) => ({
-                    ...score,
-                    rank: index + 1
-                }));
+                const sortedScores = [...calculatedScores].sort((a, b) => b.weightedScore - a.weightedScore);
+                
+                let lastScore = -1;
+                let lastRank = 0;
+                const finalRankedScores = sortedScores.map((score, index) => {
+                    const rank = score.weightedScore === lastScore ? lastRank : index + 1;
+                    lastScore = score.weightedScore;
+                    lastRank = rank;
+                    return { ...score, rank };
+                });
 
                 return res.status(200).json(finalRankedScores);
             }
@@ -133,12 +147,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.status(201).json({ success: true });
             }
             if (entity === 'criteria') {
-                const { name, max_score, weight } = req.body;
-                await client.query('INSERT INTO criteria (name, max_score) VALUES ($1, $2)', [name, max_score ?? weight]);
+                const { name, weight } = req.body;
+                await client.query('INSERT INTO criteria (name, weight) VALUES ($1, $2)', [name, weight]);
                 return res.status(201).json({ success: true });
             }
-            if (entity === 'activeTeamId') {
-                await client.query('UPDATE app_state SET active_team_id = $1 WHERE id = 1', [req.body.id]);
+            if (entity === 'toggleActiveTeam') {
+                const { teamId } = req.body;
+                if (!teamId) return res.status(400).json({ error: 'teamId is required' });
+
+                await client.query('BEGIN');
+                const { rows } = await client.query('SELECT active_team_ids FROM app_state WHERE id = 1 FOR UPDATE');
+                const currentActiveIds: string[] = rows[0]?.active_team_ids || [];
+                
+                const newActiveIds = currentActiveIds.includes(teamId)
+                    ? currentActiveIds.filter(id => id !== teamId)
+                    : [...currentActiveIds, teamId];
+
+                await client.query('UPDATE app_state SET active_team_ids = $1::uuid[] WHERE id = 1', [newActiveIds]);
+                await client.query('COMMIT');
+
                 return res.status(200).json({ success: true });
             }
             if (entity === 'scores') {

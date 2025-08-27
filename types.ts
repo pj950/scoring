@@ -6,14 +6,13 @@ export interface Team {
 export interface Judge {
   id:string;
   name: string;
-  loginCode: string;
+  secret_id: string;
 }
 
 export interface Criterion {
   id: string;
   name: string;
   weight: number;
-  description: string;
 }
 
 export interface Score {
@@ -27,7 +26,7 @@ export interface AppData {
   judges?: Judge[];
   criteria?: Criterion[];
   scores?: Score[];
-  activeTeamId?: string | null;
+  activeTeamIds?: string[];
 }
 
 export interface FinalScore {
