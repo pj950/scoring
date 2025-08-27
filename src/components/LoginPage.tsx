@@ -50,7 +50,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onShowLeaderboard }) => 
           <p className="mt-2 text-sm text-gray-400">
             Awaiting Authentication...
           </p>
-          <p className="mt-2 text-xs text-cyber-600 font-mono">// Access Code Hint: LOGIN_CODE </p>  //'{ADMIN_LOGIN_CODE}'
+          <p className="mt-2 text-xs text-cyber-600 font-mono">// Access Code Hint: LOGIN_CODE </p>  
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="relative">
