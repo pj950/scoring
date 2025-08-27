@@ -18,3 +18,10 @@ View your app in AI Studio: https://ai.studio/apps/drive/1LaIElkNF6h2Bh_EKj0XZPs
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+
+## Setup
+
+- Configure your database: set `DATABASE_URL` in your environment.
+- Initialize schema: run the SQL in `schema.sql` once.
+- If you are upgrading from an older schema, run any files in `migrations/`.
+- For local API proxying, run `vercel dev` on port 3000 so Vite proxy `server.proxy['/api']` works.

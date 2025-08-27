@@ -64,18 +64,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.status(200).json(allScores);
             }
             if (entity === 'activeTeamIds') {
-                 const { rows } = await client.query('SELECT active_team_ids FROM app_state WHERE id = 1');
-                 return res.status(200).json(rows.length > 0 ? rows[0].active_team_ids : []);
+                try {
+                    const { rows } = await client.query('SELECT active_team_ids FROM app_state WHERE id = 1');
+                    return res.status(200).json(rows.length > 0 ? (rows[0].active_team_ids || []) : []);
+                } catch (e: any) {
+                    // Fallback for legacy schema with single active_team_id column
+                    if (e && e.code === '42703') { // undefined_column
+                        const { rows } = await client.query('SELECT active_team_id FROM app_state WHERE id = 1');
+                        const single = rows.length > 0 ? rows[0].active_team_id : null;
+                        return res.status(200).json(single ? [single] : []);
+                    }
+                    throw e;
+                }
             }
             if (entity === 'finalScores') {
+                // Determine which column to use for weighting (supports legacy schemas)
+                const weightColumnExists = await client.query("SELECT 1 FROM information_schema.columns WHERE table_name = 'criteria' AND column_name = 'weight'");
+                const criteriaQuery = (weightColumnExists.rows && weightColumnExists.rows.length > 0)
+                    ? 'SELECT id, weight FROM criteria'
+                    : 'SELECT id, max_score AS weight FROM criteria';
+
                 const [teamsRes, criteriaRes, ratingsRes] = await Promise.all([
                     client.query('SELECT id, name FROM teams'),
-                    client.query('SELECT id, weight FROM criteria'),
+                    client.query(criteriaQuery),
                     client.query('SELECT team_id, judge_id, scores FROM ratings'),
                 ]);
-                
+
                 const teams = teamsRes.rows;
-                const criteria: {id: string, weight: number}[] = criteriaRes.rows;
+                const criteria: {id: string, weight: number}[] = criteriaRes.rows.map((r: any) => ({ id: r.id, weight: Number(r.weight) }));
                 const ratings: DbRating[] = ratingsRes.rows;
 
                 const criteriaMap = new Map(criteria.map(c => [c.id, c.weight]));
@@ -155,18 +171,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const { teamId } = req.body;
                 if (!teamId) return res.status(400).json({ error: 'teamId is required' });
 
-                await client.query('BEGIN');
-                const { rows } = await client.query('SELECT active_team_ids FROM app_state WHERE id = 1 FOR UPDATE');
-                const currentActiveIds: string[] = rows[0]?.active_team_ids || [];
-                
-                const newActiveIds = currentActiveIds.includes(teamId)
-                    ? currentActiveIds.filter(id => id !== teamId)
-                    : [...currentActiveIds, teamId];
+                try {
+                    await client.query('BEGIN');
+                    const { rows } = await client.query('SELECT active_team_ids FROM app_state WHERE id = 1 FOR UPDATE');
+                    const currentActiveIds: string[] = rows[0]?.active_team_ids || [];
 
-                await client.query('UPDATE app_state SET active_team_ids = $1::uuid[] WHERE id = 1', [newActiveIds]);
-                await client.query('COMMIT');
+                    const newActiveIds = currentActiveIds.includes(teamId)
+                        ? currentActiveIds.filter((id: string) => id !== teamId)
+                        : [...currentActiveIds, teamId];
 
-                return res.status(200).json({ success: true });
+                    await client.query('UPDATE app_state SET active_team_ids = $1::uuid[] WHERE id = 1', [newActiveIds]);
+                    await client.query('COMMIT');
+                    return res.status(200).json({ success: true });
+                } catch (e: any) {
+                    // Fallback for legacy schema with single active_team_id column
+                    if (e && e.code === '42703') { // undefined_column
+                        await client.query('ROLLBACK');
+                        await client.query('BEGIN');
+                        const { rows } = await client.query('SELECT active_team_id FROM app_state WHERE id = 1 FOR UPDATE');
+                        const currentSingle: string | null = rows[0]?.active_team_id || null;
+                        const newSingle = currentSingle === teamId ? null : teamId;
+                        await client.query('UPDATE app_state SET active_team_id = $1::uuid WHERE id = 1', [newSingle]);
+                        await client.query('COMMIT');
+                        return res.status(200).json({ success: true });
+                    }
+                    throw e;
+                }
             }
             if (entity === 'scores') {
                 const { teamId, judgeId, scores } = req.body;

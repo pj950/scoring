@@ -86,3 +86,22 @@ To run the full-stack application on your local machine, you need to run both th
         This will start on a different port (e.g., `5173`). Your `vite.config.ts` is already configured to proxy API requests from `/api` to the Vercel server running on port 3000.
 
 Now you can open your browser to the Vite dev server address (e.g., `http://localhost:5173`) and use the application locally, connected to your live Neon database.
+
+## Database Migration (if upgrading)
+
+If your existing DB uses `criteria.max_score` and `app_state.active_team_id`, migrate:
+
+```sql
+-- Add weight column if missing
+ALTER TABLE criteria ADD COLUMN IF NOT EXISTS weight REAL;
+-- Backfill weight from max_score (default 1 if null)
+UPDATE criteria SET weight = COALESCE(weight, CASE WHEN max_score IS NOT NULL THEN max_score::real ELSE 1 END);
+
+-- Add active_team_ids array column if missing
+ALTER TABLE app_state ADD COLUMN IF NOT EXISTS active_team_ids UUID[] DEFAULT ARRAY[]::uuid[];
+-- Backfill from single column
+UPDATE app_state SET active_team_ids = CASE WHEN active_team_id IS NOT NULL THEN ARRAY[active_team_id] ELSE ARRAY[]::uuid[] END
+WHERE (active_team_ids IS NULL OR array_length(active_team_ids,1) IS NULL);
+```
+
+The API supports both schemas and will fall back automatically, but running the above is recommended.
