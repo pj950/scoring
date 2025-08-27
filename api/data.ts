@@ -155,18 +155,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const { teamId } = req.body;
                 if (!teamId) return res.status(400).json({ error: 'teamId is required' });
 
-                await client.query('BEGIN');
-                const { rows } = await client.query('SELECT active_team_ids FROM app_state WHERE id = 1 FOR UPDATE');
-                const currentActiveIds: string[] = rows[0]?.active_team_ids || [];
-                
-                const newActiveIds = currentActiveIds.includes(teamId)
-                    ? currentActiveIds.filter(id => id !== teamId)
-                    : [...currentActiveIds, teamId];
+                try {
+                    await client.query('BEGIN');
+                    const { rows } = await client.query('SELECT active_team_ids FROM app_state WHERE id = 1 FOR UPDATE');
+                    const currentActiveIds: string[] = rows[0]?.active_team_ids || [];
+                    
+                    const newActiveIds = currentActiveIds.includes(teamId)
+                        ? currentActiveIds.filter(id => id !== teamId)
+                        : [...currentActiveIds, teamId];
 
-                await client.query('UPDATE app_state SET active_team_ids = $1::uuid[] WHERE id = 1', [newActiveIds]);
-                await client.query('COMMIT');
+                    await client.query('UPDATE app_state SET active_team_ids = $1::uuid[] WHERE id = 1', [newActiveIds]);
+                    await client.query('COMMIT');
 
-                return res.status(200).json({ success: true });
+                    return res.status(200).json({ success: true });
+                } catch (transactionError) {
+                    await client.query('ROLLBACK');
+                    console.error('Transaction error in toggleActiveTeam:', transactionError);
+                    throw transactionError; // Re-throw to be caught by outer catch block
+                }
             }
             if (entity === 'scores') {
                 const { teamId, judgeId, scores } = req.body;
