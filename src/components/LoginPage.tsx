@@ -4,7 +4,7 @@ import { CircuitIcon } from './Icons';
 // The hint now uses the environment variable, ensuring it matches what the backend expects.
 // FIX: Hardcoding ADMIN_LOGIN_CODE to resolve TypeScript errors.
 // The project's tsconfig.json should be configured to include "vite/client" to use import.meta.env.
-const ADMIN_LOGIN_CODE = 'ADMIN-2024'; 
+//const ADMIN_LOGIN_CODE = 'ADMIN-2024'; 
 
 
 interface LoginPageProps {
