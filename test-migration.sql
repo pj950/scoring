@@ -12,7 +12,7 @@ BEGIN
     END IF;
 END$$;
 
--- Fix the app_state table: replace active_team_id with active_team_ids array
+-- Fix the app_state table: replace active_team_id with active_team_ids array and add scoring_system
 DO $$
 BEGIN
     -- Check if old column exists
@@ -36,5 +36,14 @@ BEGIN
         ELSE
             RAISE NOTICE 'Column active_team_ids already exists';
         END IF;
+    END IF;
+
+    -- Add scoring_system column if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'app_state' AND column_name = 'scoring_system') THEN
+        ALTER TABLE app_state ADD COLUMN scoring_system INTEGER NOT NULL DEFAULT 10;
+        ALTER TABLE app_state ADD CONSTRAINT valid_scoring_system CHECK (scoring_system IN (10, 100));
+        RAISE NOTICE 'Added scoring_system column with default value 10';
+    ELSE
+        RAISE NOTICE 'Column scoring_system already exists';
     END IF;
 END$$;

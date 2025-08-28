@@ -67,16 +67,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  const { rows } = await client.query('SELECT active_team_ids FROM app_state WHERE id = 1');
                  return res.status(200).json(rows.length > 0 ? rows[0].active_team_ids : []);
             }
+            if (entity === 'scoringSystem') {
+                const { rows } = await client.query('SELECT scoring_system FROM app_state WHERE id = 1');
+                return res.status(200).json(rows.length > 0 ? rows[0].scoring_system : 10);
+            }
             if (entity === 'finalScores') {
-                const [teamsRes, criteriaRes, ratingsRes] = await Promise.all([
+                const [teamsRes, criteriaRes, ratingsRes, scoringSystemRes] = await Promise.all([
                     client.query('SELECT id, name FROM teams'),
                     client.query('SELECT id, weight FROM criteria'),
                     client.query('SELECT team_id, judge_id, scores FROM ratings'),
+                    client.query('SELECT scoring_system FROM app_state WHERE id = 1'),
                 ]);
                 
                 const teams = teamsRes.rows;
                 const criteria: {id: string, weight: number}[] = criteriaRes.rows;
                 const ratings: DbRating[] = ratingsRes.rows;
+                const scoringSystem = scoringSystemRes.rows[0]?.scoring_system || 10;
 
                 const criteriaMap = new Map(criteria.map(c => [c.id, c.weight]));
 
@@ -106,7 +112,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                             const weight = criteriaMap.get(criterionId);
                             if (weight) {
                                 const score = Number(rating.scores[criterionId]);
-                                judgeWeightedScore += (score / 10) * weight;
+                                // Normalize score to percentage based on scoring system
+                                judgeWeightedScore += (score / scoringSystem) * weight;
                             }
                         }
                         return judgeWeightedScore;
@@ -183,6 +190,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     DO UPDATE SET scores = $3
                 `, [teamId, judgeId, JSON.stringify(scores)]);
                 return res.status(201).json({ success: true });
+            }
+            if (entity === 'setScoringSystem') {
+                const { scoringSystem } = req.body;
+                if (![10, 100].includes(scoringSystem)) {
+                    return res.status(400).json({ error: 'Invalid scoring system. Must be 10 or 100.' });
+                }
+                await client.query('UPDATE app_state SET scoring_system = $1 WHERE id = 1', [scoringSystem]);
+                return res.status(200).json({ success: true });
             }
         }
         

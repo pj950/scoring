@@ -12,9 +12,10 @@ const ScoringModal: React.FC<{
   team: Team;
   criteria: Criterion[];
   judgeId: string;
+  scoringSystem: number;
   onClose: () => void;
   onSubmit: () => void;
-}> = ({ team, criteria, judgeId, onClose, onSubmit }) => {
+}> = ({ team, criteria, judgeId, scoringSystem, onClose, onSubmit }) => {
   const { data: judgeScores } = useSWR<Score>(`/api/data?entity=scores&judgeId=${judgeId}&teamId=${team.id}`);
   const [scores, setScores] = useState<Record<string, number>>({});
 
@@ -74,13 +75,15 @@ const ScoringModal: React.FC<{
                 <input
                     type="range"
                     min="0"
-                    max="10"
+                    max={scoringSystem}
                     step="1"
                     value={scores[c.id] || 0}
                     onChange={e => handleScoreChange(c.id, parseInt(e.target.value, 10))}
                     className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyber-400"
                 />
-                <span key={`${c.id}-${scores[c.id] || 0}`} className="font-bold font-display text-2xl text-cyber-300 w-16 text-center animate-pop-in">{scores[c.id] || 0}</span>
+                <span key={`${c.id}-${scores[c.id] || 0}`} className="font-bold font-display text-2xl text-cyber-300 w-20 text-center animate-pop-in">
+                  {scores[c.id] || 0}/{scoringSystem}
+                </span>
               </div>
             </div>
           ))}
@@ -101,6 +104,7 @@ const JudgeDashboard: React.FC<JudgeDashboardProps> = ({ judge, onLogout }) => {
   const { data: criteria = [] } = useSWR<Criterion[]>('/api/data?entity=criteria');
   const { data: scores = [] } = useSWR<Score[]>(`/api/data?entity=scores&judgeId=${judge.id}`, { refreshInterval: 2000 });
   const { data: activeTeamIds = [] } = useSWR<string[]>('/api/data?entity=activeTeamIds', { refreshInterval: 2000 });
+  const { data: scoringSystem = 10 } = useSWR<number>('/api/data?entity=scoringSystem');
   
   const [scoringTeam, setScoringTeam] = useState<Team | null>(null);
 
@@ -171,6 +175,7 @@ const JudgeDashboard: React.FC<JudgeDashboardProps> = ({ judge, onLogout }) => {
             team={scoringTeam}
             criteria={criteria}
             judgeId={judge.id}
+            scoringSystem={scoringSystem}
             onClose={() => setScoringTeam(null)}
             onSubmit={refreshAllScores}
         />

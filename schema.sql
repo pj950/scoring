@@ -44,10 +44,12 @@ CREATE TABLE IF NOT EXISTS app_state (
   id INT PRIMARY KEY DEFAULT 1,
   is_setup_locked BOOLEAN NOT NULL DEFAULT FALSE,
   active_team_ids UUID[] DEFAULT ARRAY[]::UUID[],
-  CONSTRAINT single_row CHECK (id = 1)
+  scoring_system INTEGER NOT NULL DEFAULT 10,  -- 10 for 10-point system, 100 for 100-point system
+  CONSTRAINT single_row CHECK (id = 1),
+  CONSTRAINT valid_scoring_system CHECK (scoring_system IN (10, 100))
 );
 
 -- Insert the initial single row for app_state
-INSERT INTO app_state (id, is_setup_locked, active_team_ids)
-VALUES (1, FALSE, ARRAY[]::UUID[])
+INSERT INTO app_state (id, is_setup_locked, active_team_ids, scoring_system)
+VALUES (1, FALSE, ARRAY[]::UUID[], 10)
 ON CONFLICT (id) DO NOTHING;

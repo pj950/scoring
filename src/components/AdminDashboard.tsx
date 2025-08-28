@@ -24,6 +24,7 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const { data: scores = [] } = useSWR<Score[]>('/api/data?entity=scores');
   const { data: activeTeamIds = [] } = useSWR<string[]>('/api/data?entity=activeTeamIds');
   const { data: finalScores = [] } = useSWR<FinalScore[]>('/api/data?entity=finalScores', { refreshInterval: 5000 });
+  const { data: scoringSystem = 10 } = useSWR<number>('/api/data?entity=scoringSystem');
 
   const [newItemName, setNewItemName] = useState('');
   const [newCriterion, setNewCriterion] = useState({ name: '', weight: 10 });
@@ -36,6 +37,7 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       mutate('/api/data?entity=scores');
       mutate('/api/data?entity=activeTeamIds');
       mutate('/api/data?entity=finalScores');
+      mutate('/api/data?entity=scoringSystem');
   }
 
   const handleAddItem = async (entity: 'teams' | 'judges') => {
@@ -53,12 +55,29 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const handleAddCriterion = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newCriterion.name.trim() && newCriterion.weight > 0) {
+      // Check if adding this criterion would exceed 100% total weight
+      if (totalWeight + newCriterion.weight > 100) {
+        alert(`Cannot add criterion. Total weight would exceed 100%. Current total: ${totalWeight}%, trying to add: ${newCriterion.weight}%`);
+        return;
+      }
+      
       await fetch('/api/data?entity=criteria', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newCriterion),
       });
       setNewCriterion({ name: '', weight: 10 });
+      mutateAll();
+    }
+  };
+
+  const handleScoringSystemChange = async (newScoringSystem: number) => {
+    if (confirm(`Are you sure you want to change the scoring system to ${newScoringSystem}-point system? This will affect how scores are calculated.`)) {
+      await fetch('/api/data?entity=setScoringSystem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scoringSystem: newScoringSystem }),
+      });
       mutateAll();
     }
   };
@@ -141,31 +160,120 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     </div>
   );
 
-  const renderCriteria = () => (
-    <div>
-        <form onSubmit={handleAddCriterion} className="p-4 mb-4 space-y-3 border rounded-lg bg-slate-800 border-slate-700">
-            <h3 className="text-lg font-semibold font-display">Add New Criterion</h3>
-            <input value={newCriterion.name} onChange={e => setNewCriterion({...newCriterion, name: e.target.value})} placeholder="Criterion Name (e.g., Innovation)" className="w-full p-2 border rounded bg-slate-900 border-slate-600 focus:border-cyber-400 focus:ring-cyber-400 focus:outline-none"/>
-            <input type="number" value={newCriterion.weight} onChange={e => setNewCriterion({...newCriterion, weight: parseInt(e.target.value, 10) || 0})} placeholder="Weight (%)" className="w-full p-2 border rounded bg-slate-900 border-slate-600 focus:border-cyber-400 focus:ring-cyber-400 focus:outline-none"/>
-            <button type="submit" className="w-full px-4 py-2 bg-cyber-600 text-white rounded hover:bg-cyber-500 transition-colors">Add Criterion</button>
-        </form>
-         <div className="text-right text-gray-400 font-bold mb-4 pr-2">
-            Total Weight: <span className={totalWeight !== 100 ? 'text-red-400 animate-pulse' : 'text-green-400'}>{totalWeight}%</span>
-        </div>
-        <div className="space-y-2">
-            {criteria.map(c => (
-                <HudCard key={c.id}>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <span className="font-medium">{c.name} (Weight: {c.weight}%)</span>
-                        </div>
-                        <button onClick={() => handleDeleteItem('criteria', c.id)} className="p-2 text-gray-400 hover:text-red-500"><TrashIcon className="w-5 h-5"/></button>
-                    </div>
-                </HudCard>
-            ))}
-        </div>
-    </div>
-  );
+  const renderCriteria = () => {
+    const maxWeight = 100 - totalWeight;
+    const canAddCriterion = totalWeight < 100;
+    
+    return (
+      <div>
+          {/* Scoring System Selector */}
+          <div className="p-4 mb-4 border rounded-lg bg-slate-800 border-slate-700">
+              <h3 className="text-lg font-semibold font-display mb-3">Scoring System</h3>
+              <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                          type="radio" 
+                          value={10} 
+                          checked={scoringSystem === 10}
+                          onChange={(e) => handleScoringSystemChange(parseInt(e.target.value))}
+                          className="text-cyber-400 focus:ring-cyber-400"
+                      />
+                      <span className="text-gray-300">10-Point System (0-10)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                          type="radio" 
+                          value={100} 
+                          checked={scoringSystem === 100}
+                          onChange={(e) => handleScoringSystemChange(parseInt(e.target.value))}
+                          className="text-cyber-400 focus:ring-cyber-400"
+                      />
+                      <span className="text-gray-300">100-Point System (0-100)</span>
+                  </label>
+              </div>
+              <p className="text-sm text-gray-400 mt-2">
+                  Each criterion will be scored from 0 to {scoringSystem} points. Maximum possible score per criterion: {scoringSystem} points.
+              </p>
+          </div>
+
+          {/* Add Criterion Form */}
+          <form onSubmit={handleAddCriterion} className="p-4 mb-4 space-y-3 border rounded-lg bg-slate-800 border-slate-700">
+              <h3 className="text-lg font-semibold font-display">Add New Criterion</h3>
+              <input 
+                  value={newCriterion.name} 
+                  onChange={e => setNewCriterion({...newCriterion, name: e.target.value})} 
+                  placeholder="Criterion Name (e.g., Innovation)" 
+                  className="w-full p-2 border rounded bg-slate-900 border-slate-600 focus:border-cyber-400 focus:ring-cyber-400 focus:outline-none"
+                  disabled={!canAddCriterion}
+              />
+              <div className="flex gap-2">
+                  <input 
+                      type="number" 
+                      value={newCriterion.weight} 
+                      onChange={e => setNewCriterion({...newCriterion, weight: Math.min(parseInt(e.target.value, 10) || 0, maxWeight)})} 
+                      placeholder="Weight (%)" 
+                      min="1"
+                      max={maxWeight}
+                      className="flex-grow p-2 border rounded bg-slate-900 border-slate-600 focus:border-cyber-400 focus:ring-cyber-400 focus:outline-none"
+                      disabled={!canAddCriterion}
+                  />
+                  <span className="flex items-center text-sm text-gray-400 px-2">
+                      Max: {maxWeight}%
+                  </span>
+              </div>
+              <button 
+                  type="submit" 
+                  disabled={!canAddCriterion || !newCriterion.name.trim() || newCriterion.weight <= 0}
+                  className="w-full px-4 py-2 bg-cyber-600 text-white rounded hover:bg-cyber-500 disabled:bg-slate-700 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+              >
+                  {canAddCriterion ? 'Add Criterion' : 'Cannot Add - Total Weight at 100%'}
+              </button>
+          </form>
+
+          {/* Total Weight Display */}
+          <div className="text-right text-gray-400 font-bold mb-4 pr-2">
+              Total Weight: 
+              <span className={`ml-2 ${
+                  totalWeight === 100 ? 'text-green-400' : 
+                  totalWeight > 100 ? 'text-red-400 animate-pulse' : 
+                  'text-yellow-400'
+              }`}>
+                  {totalWeight}%
+              </span>
+              {totalWeight !== 100 && (
+                  <span className="text-sm text-gray-500 ml-2">
+                      ({totalWeight < 100 ? `${100 - totalWeight}% remaining` : `${totalWeight - 100}% over limit`})
+                  </span>
+              )}
+          </div>
+
+          {/* Criteria List */}
+          <div className="space-y-2">
+              {criteria.map(c => (
+                  <HudCard key={c.id}>
+                      <div className="flex items-center justify-between">
+                          <div>
+                              <span className="font-medium">{c.name}</span>
+                              <span className="text-sm text-gray-400 ml-2">
+                                  (Weight: {c.weight}% • Max Score: {scoringSystem} points)
+                              </span>
+                          </div>
+                          <button onClick={() => handleDeleteItem('criteria', c.id)} className="p-2 text-gray-400 hover:text-red-500">
+                              <TrashIcon className="w-5 h-5"/>
+                          </button>
+                      </div>
+                  </HudCard>
+              ))}
+              {criteria.length === 0 && (
+                  <div className="text-center text-gray-500 py-8">
+                      <p>No criteria added yet.</p>
+                      <p className="text-sm">Add criteria to enable scoring and rankings.</p>
+                  </div>
+              )}
+          </div>
+      </div>
+    );
+  };
   
   const renderProgress = () => (
     <div className="space-y-8">
