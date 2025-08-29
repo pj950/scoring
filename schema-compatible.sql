@@ -1,17 +1,17 @@
--- This script contains the SQL commands to set up the database schema.
--- Copy and paste the entire content into the Neon SQL Editor and run it once.
+-- AI Hackathon Scorer Database Schema - Compatible Version
+-- Copy and paste into Neon SQL Editor
 
 -- Enable UUID generation
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Table for Teams
+-- Create teams table
 CREATE TABLE IF NOT EXISTS teams (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name VARCHAR(255) NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Table for Judges
+-- Create judges table
 CREATE TABLE IF NOT EXISTS judges (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name VARCHAR(255) NOT NULL,
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS judges (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Table for Scoring Criteria
+-- Create criteria table
 CREATE TABLE IF NOT EXISTS criteria (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name VARCHAR(255) NOT NULL,
@@ -27,8 +27,7 @@ CREATE TABLE IF NOT EXISTS criteria (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Table for Ratings
--- Each judge can only rate each team once.
+-- Create ratings table
 CREATE TABLE IF NOT EXISTS ratings (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   judge_id UUID NOT NULL REFERENCES judges(id) ON DELETE CASCADE,
@@ -38,21 +37,18 @@ CREATE TABLE IF NOT EXISTS ratings (
   UNIQUE(judge_id, team_id)
 );
 
--- Table for general application state (like setup lock and active teams)
--- This table will only ever have one row.
+-- Create app_state table
 CREATE TABLE IF NOT EXISTS app_state (
   id INT PRIMARY KEY DEFAULT 1,
   is_setup_locked BOOLEAN NOT NULL DEFAULT FALSE,
-  active_team_ids UUID[] DEFAULT ARRAY[]::UUID[],
-  scoring_system INTEGER NOT NULL DEFAULT 10,  -- 10 for 10-point system, 100 for 100-point system
-  CONSTRAINT single_row CHECK (id = 1),
-  CONSTRAINT valid_scoring_system CHECK (scoring_system IN (10, 100))
+  active_team_ids UUID[],
+  scoring_system INTEGER NOT NULL DEFAULT 10
 );
 
--- Insert the initial single row for app_state
+-- Set default value for active_team_ids if not already set
+ALTER TABLE app_state ALTER COLUMN active_team_ids SET DEFAULT ARRAY[]::UUID[];
+
+-- Insert initial data
 INSERT INTO app_state (id, is_setup_locked, active_team_ids, scoring_system)
 VALUES (1, FALSE, ARRAY[]::UUID[], 10)
 ON CONFLICT (id) DO NOTHING;
-
--- Verify tables were created successfully
-SELECT 'Schema creation completed successfully' as status;
